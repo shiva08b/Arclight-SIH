@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">LabelLens Inspector</string>
+    <string name="title_activity_main">LabelLens Inspector</string>
+    <string name="package_name">in.gov.labellens</string>
+    <string name="custom_url_scheme">in.gov.labellens</string>
+</resources>
