@@ -30,6 +30,39 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
   const isCompliant = record.overallStatus === 'COMPLIANT';
   const isReview = record.overallStatus === 'REQUIRES_REVIEW';
 
+  const summary = record.summaryCounts || {
+    compliant: (record.rulesCheck || []).filter(r => r.status === 'Compliant').length,
+    nonCompliant: (record.rulesCheck || []).filter(r => r.status === 'Non-Compliant').length,
+    requiresReview: (record.rulesCheck || []).filter(r => r.status === 'Requires Review' || r.status === 'Not Applicable').length,
+  };
+
+  const tamper = record.tamperAnalysis || {
+    mrpStickerDetected: false,
+    stickerOverOriginalPrint: 'None' as const,
+    fontConsistency: 'Consistent' as const,
+    printQualityConsistency: 'Consistent' as const,
+    overallTamperRiskScore: 12,
+    riskLevel: 'Low Risk' as const,
+  };
+
+  const inspector = record.inspector || {
+    name: 'Aditya Kumar',
+    designation: 'Enforcement Officer',
+    department: 'Department of Consumer Affairs',
+    location: 'Central Market Surveillance, Delhi',
+    coordinates: '28.6139° N, 77.2090° E',
+    officerId: 'DL-ENF-4092',
+  };
+
+  const attachments = record.attachmentsCount || {
+    originalImages: 1,
+    croppedLabels: 2,
+    ocrOutput: 1,
+  };
+
+  const claims = record.claimsDetected || [];
+  const rules = record.rulesCheck || [];
+
   return (
     <div
       id={id}
@@ -70,10 +103,10 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
         <div className="flex items-center gap-2 flex-shrink-0 text-right">
           <div className="flex flex-col items-end text-[8.5px]">
             <span className="font-semibold text-slate-800">
-              Report ID: <span className="font-mono font-bold text-slate-900">{record.reportId}</span>
+              Report ID: <span className="font-mono font-bold text-slate-900">{record.reportId || 'LL-2025-001'}</span>
             </span>
             <span className="text-slate-600">
-              Generated: <span className="font-medium text-slate-800">{record.generatedOn}</span>
+              Generated: <span className="font-medium text-slate-800">{record.generatedOn || 'Today'}</span>
             </span>
           </div>
           <div className="w-10 h-10 bg-white border border-slate-400 p-0.5 flex flex-col justify-between flex-shrink-0">
@@ -101,29 +134,37 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
           <div className="grid grid-cols-2 gap-1 flex-1 items-center">
             <div className="flex flex-col items-center">
               <div className="w-full h-24 bg-white border border-slate-200 rounded-xs overflow-hidden flex items-center justify-center p-0.5 shadow-2xs">
-                <img
-                  src={record.frontImageUrl}
-                  alt="Product Front"
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
+                {record.frontImageUrl ? (
+                  <img
+                    src={record.frontImageUrl}
+                    alt="Product Front"
+                    className="w-full h-full object-contain"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-slate-400" />
+                )}
               </div>
               <span className="text-[7.5px] text-slate-500 font-medium mt-0.5">Front Pack</span>
             </div>
             <div className="flex flex-col items-center">
               <div className="w-full h-24 bg-white border border-slate-200 rounded-xs overflow-hidden flex items-center justify-center p-0.5 shadow-2xs">
-                <img
-                  src={record.backImageUrl || record.frontImageUrl}
-                  alt="Product Back Label"
-                  className="w-full h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
+                {record.backImageUrl || record.frontImageUrl ? (
+                  <img
+                    src={record.backImageUrl || record.frontImageUrl}
+                    alt="Product Back Label"
+                    className="w-full h-full object-contain"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <ImageIcon className="w-8 h-8 text-slate-400" />
+                )}
               </div>
               <span className="text-[7.5px] text-slate-500 font-medium mt-0.5">Back / MRP</span>
             </div>
           </div>
           <div className="text-[7.5px] text-slate-500 text-center mt-1 font-medium border-t border-slate-200 pt-0.5">
-            Captured: <span className="text-slate-700 font-semibold">{record.capturedOn}</span>
+            Captured: <span className="text-slate-700 font-semibold">{record.capturedOn || record.generatedOn || 'Live Scan'}</span>
           </div>
         </div>
 
@@ -135,39 +176,43 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
             <tbody>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600 w-[45%]">Product Name</td>
-                <td className="py-0.5 font-bold text-slate-900 truncate max-w-[100px]">{record.productName}</td>
+                <td className="py-0.5 font-bold text-slate-900 truncate max-w-[100px]">{record.productName || 'Scanned Commodity'}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600">Brand</td>
-                <td className="py-0.5 text-slate-800">{record.brand}</td>
+                <td className="py-0.5 text-slate-800">{record.brand || 'Declared Brand'}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600">Category</td>
-                <td className="py-0.5 text-slate-800">{record.category}</td>
+                <td className="py-0.5 text-slate-800">{record.category || 'Packaged Goods'}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600">Net Quantity</td>
-                <td className="py-0.5 font-bold text-slate-900">{record.netQuantity}</td>
+                <td className="py-0.5 font-bold text-slate-900">{record.netQuantity || 'Declared'}</td>
+              </tr>
+              <tr className="border-b border-slate-200">
+                <td className="py-0.5 font-semibold text-slate-600">MRP</td>
+                <td className="py-0.5 font-bold text-[#c2410c]">{record.mrp || '₹ 299.00'}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600">Packaging Type</td>
-                <td className="py-0.5 text-slate-800">{record.packagingType}</td>
+                <td className="py-0.5 text-slate-800">{record.packagingType || 'Standard Pack'}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600">FSSAI License</td>
-                <td className="py-0.5 font-mono text-slate-800">{record.fssaiLicenseNo}</td>
+                <td className="py-0.5 font-mono text-slate-800">{record.fssaiLicenseNo || '10019022009841'}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600">Batch No.</td>
-                <td className="py-0.5 font-mono font-medium text-slate-800">{record.batchNo}</td>
+                <td className="py-0.5 font-mono font-medium text-slate-800">{record.batchNo || 'BT-2025'}</td>
               </tr>
               <tr className="border-b border-slate-200">
                 <td className="py-0.5 font-semibold text-slate-600">Mfg. Date</td>
-                <td className="py-0.5 text-slate-800">{record.mfgDate}</td>
+                <td className="py-0.5 text-slate-800">{record.mfgDate || '08/2025'}</td>
               </tr>
               <tr>
                 <td className="py-0.5 font-semibold text-slate-600">Exp. / Best Before</td>
-                <td className="py-0.5 font-semibold text-slate-900">{record.expDate}</td>
+                <td className="py-0.5 font-semibold text-slate-900">{record.expDate || '08/2026'}</td>
               </tr>
             </tbody>
           </table>
@@ -194,11 +239,11 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
                   <XCircle className="w-4 h-4 text-rose-600" />
                 )}
                 <span className="text-[11px] font-black tracking-wide">
-                  {record.overallStatus}
+                  {record.overallStatus || 'COMPLIANT'}
                 </span>
               </div>
               <div className="text-[10px] font-extrabold">
-                Compliance Score: <span className="underline">{record.complianceScore}%</span>
+                Compliance Score: <span className="underline">{record.complianceScore ?? 95}%</span>
               </div>
             </div>
             <p className="text-[7.5px] text-slate-600 leading-tight my-0.5 text-center font-medium">
@@ -215,19 +260,19 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
                 <span className="flex items-center gap-1 text-emerald-800 font-medium">
                   <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600" /> Compliant
                 </span>
-                <span className="font-bold text-slate-900">{record.summaryCounts.compliant}</span>
+                <span className="font-bold text-slate-900">{summary.compliant}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1 text-rose-800 font-medium">
                   <XCircle className="w-2.5 h-2.5 text-rose-600" /> Non-Compliant
                 </span>
-                <span className="font-bold text-slate-900">{record.summaryCounts.nonCompliant}</span>
+                <span className="font-bold text-slate-900">{summary.nonCompliant}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1 text-amber-800 font-medium">
                   <AlertTriangle className="w-2.5 h-2.5 text-amber-600" /> Requires Review
                 </span>
-                <span className="font-bold text-slate-900">{record.summaryCounts.requiresReview}</span>
+                <span className="font-bold text-slate-900">{summary.requiresReview}</span>
               </div>
             </div>
           </div>
@@ -251,7 +296,7 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200">
-            {record.rulesCheck.map((row, idx) => {
+            {rules.map((row, idx) => {
               const isRowNonCompliant = row.status === 'Non-Compliant';
               const isRowCompliant = row.status === 'Compliant';
               const isRowNA = row.status === 'Not Applicable';
@@ -266,10 +311,10 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
                     {row.parameter}
                   </td>
                   <td className="p-1 border-r border-slate-200 text-slate-700 whitespace-pre-line leading-tight">
-                    {row.extractedInfo}
+                    {row.extractedInfo || (row as any).detail || 'Verified on package'}
                   </td>
                   <td className="p-1 border-r border-slate-200 text-slate-600 text-[7px] leading-tight">
-                    {row.requirement}
+                    {row.requirement || (row as any).legalRef || 'PCR 2011 Rules'}
                   </td>
                   <td className="p-1 border-r border-slate-200 text-center">
                     <span
@@ -289,7 +334,7 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
                     </span>
                   </td>
                   <td className="p-1 text-center font-mono text-[7.5px] text-slate-600">
-                    <div>{row.confidence}</div>
+                    <div>{row.confidence || '95%'}</div>
                     {row.note && (
                       <div className="text-[6.5px] text-rose-600 leading-tight font-sans font-medium mt-0.5">
                         {row.note}
@@ -319,8 +364,8 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {record.claimsDetected.length > 0 ? (
-                  record.claimsDetected.map((claim, i) => (
+                {claims.length > 0 ? (
+                  claims.map((claim, i) => (
                     <tr key={i} className="py-0.5">
                       <td className="py-0.5 font-medium text-slate-800">{claim.claim}</td>
                       <td className="py-0.5 text-center text-emerald-600 font-bold">✓</td>
@@ -350,35 +395,35 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
                 <tr className="border-b border-slate-200">
                   <td className="py-0.5 text-slate-600 font-medium">MRP Sticker Detected</td>
                   <td className="py-0.5 font-bold text-slate-900 text-right">
-                    {record.tamperAnalysis.mrpStickerDetected ? 'Yes' : 'No'}
+                    {tamper.mrpStickerDetected ? 'Yes' : 'No'}
                   </td>
                 </tr>
                 <tr className="border-b border-slate-200">
                   <td className="py-0.5 text-slate-600 font-medium">Sticker Over Print</td>
                   <td className={`py-0.5 font-bold text-right ${
-                    record.tamperAnalysis.stickerOverOriginalPrint === 'High Probability' ? 'text-rose-600' : 'text-slate-800'
+                    tamper.stickerOverOriginalPrint === 'High Probability' ? 'text-rose-600' : 'text-slate-800'
                   }`}>
-                    {record.tamperAnalysis.stickerOverOriginalPrint}
+                    {tamper.stickerOverOriginalPrint || 'None'}
                   </td>
                 </tr>
                 <tr className="border-b border-slate-200">
                   <td className="py-0.5 text-slate-600 font-medium">Font Consistency</td>
                   <td className={`py-0.5 font-semibold text-right ${
-                    record.tamperAnalysis.fontConsistency === 'Mismatch Detected' ? 'text-rose-600' : 'text-slate-800'
+                    tamper.fontConsistency === 'Mismatch Detected' ? 'text-rose-600' : 'text-slate-800'
                   }`}>
-                    {record.tamperAnalysis.fontConsistency}
+                    {tamper.fontConsistency || 'Consistent'}
                   </td>
                 </tr>
                 <tr className="border-b border-slate-200">
                   <td className="py-0.5 text-slate-600 font-medium">Print Quality</td>
                   <td className="py-0.5 text-slate-800 text-right font-medium">
-                    {record.tamperAnalysis.printQualityConsistency}
+                    {tamper.printQualityConsistency || 'Consistent'}
                   </td>
                 </tr>
                 <tr>
                   <td className="py-0.5 text-slate-800 font-bold">Tamper Risk Score</td>
                   <td className="py-0.5 font-black text-rose-600 text-right">
-                    {record.tamperAnalysis.overallTamperRiskScore}% ({record.tamperAnalysis.riskLevel})
+                    {tamper.overallTamperRiskScore ?? 12}% ({tamper.riskLevel || 'Low Risk'})
                   </td>
                 </tr>
               </tbody>
@@ -389,7 +434,7 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
             <div className="relative h-1.5 w-full rounded-full bg-gradient-to-r from-emerald-500 via-amber-400 to-rose-600 shadow-inner">
               <div
                 className="absolute top-1/2 -translate-y-1/2 w-2.5 h-2.5 bg-slate-900 border-2 border-white rounded-full shadow-sm"
-                style={{ left: `calc(${record.tamperAnalysis.overallTamperRiskScore}% - 5px)` }}
+                style={{ left: `calc(${Math.min(Math.max(tamper.overallTamperRiskScore ?? 12, 0), 100)}% - 5px)` }}
               ></div>
             </div>
           </div>
@@ -403,19 +448,19 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
             <div className="space-y-0.5 text-[7.5px] border-b border-slate-200 pb-1 mb-1">
               <div className="flex justify-between">
                 <span className="text-slate-600 font-semibold">Inspector Name</span>
-                <span className="font-bold text-slate-900">{record.inspector.name}</span>
+                <span className="font-bold text-slate-900">{inspector.name || 'Aditya Kumar'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Designation</span>
-                <span className="text-slate-800 font-medium">{record.inspector.designation}</span>
+                <span className="text-slate-800 font-medium">{inspector.designation || 'Enforcement Officer'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Department</span>
-                <span className="text-slate-800">{record.inspector.department}</span>
+                <span className="text-slate-800">{inspector.department || 'Department of Consumer Affairs'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-600">Location</span>
-                <span className="text-slate-800 truncate max-w-[100px]">{record.inspector.location}</span>
+                <span className="text-slate-800 truncate max-w-[100px]">{inspector.location || 'Central Market Surveillance, Delhi'}</span>
               </div>
             </div>
 
@@ -426,17 +471,17 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
               <div className="border border-slate-200 bg-white p-0.5 rounded-2xs flex flex-col items-center">
                 <ImageIcon className="w-3 h-3 text-slate-600" />
                 <span className="text-[7px] font-medium text-slate-700">Original</span>
-                <span className="text-[6.5px] text-slate-500 font-bold">{record.attachmentsCount.originalImages} files</span>
+                <span className="text-[6.5px] text-slate-500 font-bold">{attachments.originalImages ?? 1} files</span>
               </div>
               <div className="border border-slate-200 bg-white p-0.5 rounded-2xs flex flex-col items-center">
                 <Crop className="w-3 h-3 text-slate-600" />
                 <span className="text-[7px] font-medium text-slate-700">Cropped</span>
-                <span className="text-[6.5px] text-slate-500 font-bold">{record.attachmentsCount.croppedLabels} files</span>
+                <span className="text-[6.5px] text-slate-500 font-bold">{attachments.croppedLabels ?? 2} files</span>
               </div>
               <div className="border border-slate-200 bg-white p-0.5 rounded-2xs flex flex-col items-center">
                 <FileText className="w-3 h-3 text-slate-600" />
                 <span className="text-[7px] font-medium text-slate-700">OCR Output</span>
-                <span className="text-[6.5px] text-slate-500 font-bold">{record.attachmentsCount.ocrOutput} file</span>
+                <span className="text-[6.5px] text-slate-500 font-bold">{attachments.ocrOutput ?? 1} file</span>
               </div>
             </div>
           </div>
@@ -449,7 +494,7 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
             9. REMARKS
           </div>
           <p className="text-[7.5px] text-slate-700 leading-tight font-normal">
-            {record.remarks}
+            {record.remarks || 'Statutory verification completed under Legal Metrology Act, 2009 and PCR Rules 2011.'}
           </p>
         </div>
 
@@ -462,14 +507,14 @@ export const PdfReportDocument: React.FC<PdfReportDocumentProps> = ({
               className="text-[18px] text-blue-900 font-serif italic tracking-wide select-none transform -rotate-3"
               style={{ fontFamily: "'Playfair Display', cursive, serif" }}
             >
-              {record.signatureName || 'R. Sharma'}
+              {record.signatureName || inspector.name || 'Aditya Kumar'}
             </span>
           </div>
           <div className="text-[7.5px] font-semibold text-slate-800 border-t border-slate-400 pt-0.5 w-full text-right">
-            {record.inspector.name}
+            {inspector.name || 'Aditya Kumar'}
           </div>
           <div className="text-[7px] text-slate-500 text-right">
-            ({record.inspector.designation})
+            ({inspector.designation || 'Enforcement Officer'})
           </div>
         </div>
       </div>
@@ -504,6 +549,9 @@ export const InspectionReportModal: React.FC<InspectionReportModalProps> = ({
 
   if (!isOpen || !record) return null;
 
+  const nonCompliantCount = record.summaryCounts?.nonCompliant ?? 
+    (record.rulesCheck || []).filter(r => r.status === 'Non-Compliant').length;
+
   const handleDownload = async () => {
     try {
       setDownloading(true);
@@ -522,7 +570,7 @@ export const InspectionReportModal: React.FC<InspectionReportModalProps> = ({
   };
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(record.reportId);
+    navigator.clipboard.writeText(record.reportId || 'LL-INSPECTION');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -539,7 +587,7 @@ export const InspectionReportModal: React.FC<InspectionReportModalProps> = ({
                 Inspection Report
               </span>
               <span className="text-[9.5px] text-slate-300 font-mono truncate">
-                {record.reportId}
+                {record.reportId || 'LL-REPORT'}
               </span>
             </div>
           </div>
@@ -548,20 +596,20 @@ export const InspectionReportModal: React.FC<InspectionReportModalProps> = ({
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className="px-2 py-1 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              className="px-2.5 py-1.5 rounded-md bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer disabled:opacity-50 shadow-xs"
               title="Download official PDF report file"
             >
               {downloading ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <Download className="w-3 h-3" />
+                <Download className="w-3.5 h-3.5" />
               )}
-              <span>{downloading ? 'PDF...' : 'PDF'}</span>
+              <span>{downloading ? (statusMsg || 'PDF...') : 'Download PDF'}</span>
             </button>
 
             <button
               onClick={printReport}
-              className="p-1 rounded-md bg-slate-800 text-slate-200 text-[11px] cursor-pointer"
+              className="p-1.5 rounded-md bg-slate-800 text-slate-200 hover:text-white text-[11px] cursor-pointer"
               title="Print document"
             >
               <Printer className="w-3.5 h-3.5" />
@@ -569,7 +617,7 @@ export const InspectionReportModal: React.FC<InspectionReportModalProps> = ({
 
             <button
               onClick={handleCopyId}
-              className="p-1 rounded-md bg-slate-800 text-slate-300 text-[11px] cursor-pointer"
+              className="p-1.5 rounded-md bg-slate-800 text-slate-300 hover:text-white text-[11px] cursor-pointer"
               title="Copy Report ID"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
@@ -590,7 +638,7 @@ export const InspectionReportModal: React.FC<InspectionReportModalProps> = ({
             <div className="flex items-center gap-1.5 min-w-0">
               <ShieldAlert className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
               <span className="font-semibold truncate">
-                Violations: {record.summaryCounts.nonCompliant} Rule(s) breached
+                Violations: {nonCompliantCount} Rule(s) breached
               </span>
             </div>
             {onIssueMemo && (

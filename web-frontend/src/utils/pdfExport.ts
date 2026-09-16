@@ -15,17 +15,20 @@ export async function exportReportToPdf(
   try {
     if (onProgress) onProgress('Preparing high-resolution render...');
 
+    // Wait slightly to ensure all images and fonts have settled
+    await new Promise((resolve) => setTimeout(resolve, 150));
+
     const canvas = await html2canvas(element, {
-      scale: 2, // Crisp retina resolution
+      scale: 2, // Crisp high-definition resolution
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
     });
 
-    if (onProgress) onProgress('Compiling PDF pages...');
+    if (onProgress) onProgress('Compiling official PDF...');
 
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/png', 1.0);
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -34,22 +37,36 @@ export async function exportReportToPdf(
 
     const pageWidth = 210;
     const pageHeight = 297;
-    const margin = 10;
+    const margin = 8;
     const contentWidth = pageWidth - margin * 2;
     const contentHeight = (canvas.height * contentWidth) / canvas.width;
 
-    // Center content within page
-    const yPos = margin;
+    if (contentHeight <= pageHeight - margin * 2) {
+      // Single page document
+      pdf.addImage(imgData, 'PNG', margin, margin, contentWidth, contentHeight);
+    } else {
+      // Multi-page document
+      let heightLeft = contentHeight;
+      let position = margin;
 
-    pdf.addImage(imgData, 'PNG', margin, yPos, contentWidth, Math.min(contentHeight, pageHeight - margin * 2));
+      pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+      heightLeft -= (pageHeight - margin * 2);
 
-    const cleanFilename = `Inspection_Report_${record.reportId.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
+      while (heightLeft > 0) {
+        position = heightLeft - contentHeight + margin;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', margin, position, contentWidth, contentHeight);
+        heightLeft -= (pageHeight - margin * 2);
+      }
+    }
+
+    const reportIdentifier = record.reportId || `LL-${Date.now()}`;
+    const cleanFilename = `Inspection_Report_${reportIdentifier.replace(/[^a-zA-Z0-9_-]/g, '_')}.pdf`;
     pdf.save(cleanFilename);
 
     if (onProgress) onProgress('Download initiated!');
   } catch (err) {
-    console.error('PDF export failed, falling back to browser print:', err);
-    // Graceful fallback
+    console.error('PDF export error, falling back to browser print:', err);
     window.print();
   }
 }
