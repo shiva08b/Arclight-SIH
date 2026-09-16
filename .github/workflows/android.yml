@@ -23,11 +23,14 @@ jobs:
           npm run build
           npx cap sync android
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Grant Gradle execute permission
         run: chmod +x web-frontend/android/gradlew
@@ -35,7 +38,7 @@ jobs:
       - name: Build Debug APK with Gradle
         run: |
           cd web-frontend/android
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace --info
 
       - name: Upload APK Artifact
         if: success()
