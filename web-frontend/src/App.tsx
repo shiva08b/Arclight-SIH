@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductInspectionRecord, ActiveTab, ScreenView } from './types';
 import { getStoredRecords, resetToDefaults, saveRecord } from './utils/storage';
-import { createInspectionFromCapturedImage } from './utils/imageAnalyzer';
+import { analyzeLabelWithGemini } from './utils/geminiVision';
 import { PhoneContainer, BottomNavBar, IndianEmblem } from './components/LayoutComponents';
 import { ScreenSplash, ScreenHome, ScreenNewInspection, ScreenAnalyzing } from './components/InspectionScreens';
 import { ScreenInspectionResult, ScreenDeclarationDetail, ScreenInspectionSaved } from './components/ResultScreens';
@@ -48,14 +48,18 @@ export default function App() {
   };
 
   // Start scan workflow
-  const handleSelectProductForScan = (recordId: string, customImage?: string) => {
+  const handleSelectProductForScan = async (recordId: string, customImage?: string) => {
     if (customImage) {
-      const newRecord = createInspectionFromCapturedImage(customImage);
-      saveRecord(newRecord);
-      setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
-      setActiveRecord(newRecord);
       setCustomUploadedImage(customImage);
       setCurrentScreen('analyzing');
+      try {
+        const aiRecord = await analyzeLabelWithGemini(customImage);
+        saveRecord(aiRecord);
+        setRecords((prev) => [aiRecord, ...prev.filter((r) => r.id !== aiRecord.id)]);
+        setActiveRecord(aiRecord);
+      } catch (err) {
+        console.error('Error during AI analysis:', err);
+      }
     } else {
       const target = records.find((r) => r.id === recordId) || records[0];
       if (target) {
