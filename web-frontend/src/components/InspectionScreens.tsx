@@ -367,6 +367,7 @@ export function ScreenNewInspection({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize camera stream
   useEffect(() => {
@@ -374,11 +375,14 @@ export function ScreenNewInspection({
 
     async function startCamera() {
       try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setCameraActive(false);
+          return;
+        }
         
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: 'environment',
+            facingMode: { ideal: 'environment' },
             width: { ideal: 1280 },
             height: { ideal: 720 }
           },
@@ -393,7 +397,7 @@ export function ScreenNewInspection({
           stream.getTracks().forEach(track => track.stop());
         }
       } catch (err) {
-        console.warn('Camera stream unavailable or permission denied:', err);
+        console.warn('Live WebRTC camera stream unavailable (fallback to native camera):', err);
         setCameraActive(false);
       }
     }
@@ -418,7 +422,10 @@ export function ScreenNewInspection({
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
-      onSelectProductForScan('rec-nutritech', dataUrl);
+      setIsCapturing(true);
+      setTimeout(() => {
+        onSelectProductForScan('rec-captured', dataUrl);
+      }, 300);
     };
     reader.readAsDataURL(file);
   };
@@ -426,9 +433,7 @@ export function ScreenNewInspection({
   const handleShutterCapture = () => {
     setIsCapturing(true);
 
-    let capturedDataUrl: string | undefined = undefined;
-
-    // Capture real snapshot from video stream if active
+    // If live WebRTC video stream is active, capture from video canvas
     if (videoRef.current && canvasRef.current && cameraActive) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -437,18 +442,24 @@ export function ScreenNewInspection({
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        capturedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        const capturedDataUrl = canvas.toDataURL('image/jpeg', 0.9);
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+        setTimeout(() => {
+          onSelectProductForScan('rec-captured', capturedDataUrl);
+        }, 400);
+        return;
       }
     }
 
-    // Stop camera stream
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+    // If live WebRTC not available (e.g. non-HTTPS mobile browser), trigger native device camera
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click();
+    } else if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
-
-    setTimeout(() => {
-      onSelectProductForScan('rec-nutritech', capturedDataUrl);
-    }, 400);
+    setIsCapturing(false);
   };
 
   const toggleFlash = () => {
@@ -464,7 +475,17 @@ export function ScreenNewInspection({
       {/* Offscreen Canvas for Real Photo Snapshot */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Hidden File Input for Real Image Upload */}
+      {/* Direct Native Mobile Camera Trigger */}
+      <input
+        type="file"
+        ref={cameraInputRef}
+        onChange={handleFileUpload}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+      />
+
+      {/* Gallery File Input for Image Upload */}
       <input
         type="file"
         ref={fileInputRef}
@@ -487,13 +508,20 @@ export function ScreenNewInspection({
         </button>
       </div>
 
-      {/* Main Viewfinder Scanner Area with Real Live Video Stream / Light Blue Frame */}
+      {/* Top Center Camera Mode Badge */}
+      <div className="absolute top-4 inset-x-0 flex justify-center z-20 pointer-events-none">
+        <span className="bg-neutral-900/80 text-white text-[11px] font-semibold px-3 py-1 rounded-full border border-neutral-700/60 shadow-md">
+          {cameraActive ? '● LIVE SCANNER' : '📷 CAMERA SCANNER'}
+        </span>
+      </div>
+
+      {/* Main Viewfinder Scanner Area */}
       <div className="flex-1 flex items-center justify-center p-6 relative">
         <div
           onClick={handleShutterCapture}
-          className={`w-[78%] aspect-[3/4] max-w-[280px] bg-[#97c4e6] rounded-xs shadow-xl relative cursor-pointer transition-all duration-300 overflow-hidden flex items-center justify-center ${
-            isCapturing ? 'brightness-125 scale-98 ring-4 ring-white' : 'hover:brightness-105'
-          }`}
+          className={`w-[82%] aspect-[3/4] max-w-[290px] bg-[#1e293b] rounded-xl shadow-2xl relative cursor-pointer transition-all duration-300 overflow-hidden flex flex-col items-center justify-center border-2 ${
+            cameraActive ? 'border-sky-400' : 'border-dashed border-sky-400/80'
+          } ${isCapturing ? 'brightness-125 scale-98 ring-4 ring-white' : 'hover:brightness-105'}`}
         >
           {/* Live Video Feed */}
           <video
@@ -506,32 +534,51 @@ export function ScreenNewInspection({
             } ${filterMode === 'Contrast' ? 'contrast-150 grayscale' : filterMode === 'Doc' ? 'brightness-110 contrast-125' : ''}`}
           />
 
-          {/* Fallback Viewfinder when camera is starting or permissions denied */}
+          {/* Interactive Native Camera Launch Card when WebRTC is inactive */}
           {!cameraActive && (
-            <div className="flex flex-col items-center justify-center text-center p-4">
-              <Camera className="w-10 h-10 text-white/80 mb-2 animate-bounce" />
-              <span className="text-xs font-bold text-white tracking-wide">Live Camera Scanner</span>
-              <span className="text-[10px] text-slate-800 font-semibold mt-1 bg-white/70 px-2 py-0.5 rounded">
-                Tap Shutter to Take Photo
+            <div className="flex flex-col items-center justify-center text-center p-5 z-10">
+              <div className="w-16 h-16 rounded-full bg-sky-500/20 border border-sky-400/40 flex items-center justify-center mb-3">
+                <Camera className="w-8 h-8 text-sky-400 animate-pulse" />
+              </div>
+              <span className="text-sm font-bold text-white tracking-wide">
+                Tap to Open Camera
               </span>
+              <p className="text-[11px] text-slate-300 mt-1 leading-tight max-w-[200px]">
+                Take a clear photo of the product label, MRP, and manufacturing panel.
+              </p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  cameraInputRef.current?.click();
+                }}
+                className="mt-3 bg-[#0066cc] hover:bg-[#0052a3] text-white text-[11px] font-bold px-3.5 py-1.5 rounded-lg shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Open Device Camera</span>
+              </button>
             </div>
           )}
 
-          {/* Hairline Scanner Overlay Grid */}
-          <div className="absolute inset-0 border border-white/40 pointer-events-none" />
+          {/* Hairline Scanner Overlay Corners */}
+          <div className="absolute inset-2 pointer-events-none">
+            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-sky-400" />
+            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-sky-400" />
+            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-sky-400" />
+            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-sky-400" />
+          </div>
           
           {/* Preset indicator tag */}
           <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none">
-            <span className="bg-black/60 text-white/95 text-[10px] font-medium px-2.5 py-0.5 rounded-full backdrop-blur-xs">
-              {cameraActive ? 'Center Label Inside Camera Frame' : 'Position Label inside Frame'}
+            <span className="bg-black/70 text-white/95 text-[10px] font-medium px-3 py-0.5 rounded-full backdrop-blur-xs border border-white/10">
+              {cameraActive ? 'Center Product Label Inside Frame' : 'Position Label & Tap Shutter'}
             </span>
           </div>
         </div>
       </div>
 
       {/* Bottom Camera Action Controls Panel */}
-      <div className="pb-8 pt-2 px-6 flex flex-col items-center gap-5 z-30 bg-[#2b2b2b]">
-        {/* Row of 3 Circle Option Buttons: Flash, Filters, Shutter */}
+      <div className="pb-8 pt-2 px-6 flex flex-col items-center gap-4 z-30 bg-[#2b2b2b]">
+        {/* Row of 3 Circle Option Buttons: Flash, Filters, Upload */}
         <div className="flex items-center justify-center gap-6">
           {/* 1. Flash Control */}
           <div className="flex flex-col items-center gap-1">
@@ -563,7 +610,6 @@ export function ScreenNewInspection({
               className="w-12 h-12 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 flex items-center justify-center transition-all cursor-pointer ring-1 ring-neutral-700"
               title="Filters"
             >
-              {/* Overlapping 3 circles SVG matching camera UI filter icon */}
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-none stroke-current" strokeWidth="1.8">
                 <circle cx="9" cy="10" r="4.5" />
                 <circle cx="15" cy="10" r="4.5" />
@@ -573,31 +619,32 @@ export function ScreenNewInspection({
             <span className="text-[11px] text-neutral-300 font-medium">Filters</span>
           </div>
 
-          {/* 3. Shutter Mode Control */}
+          {/* 3. Upload from Gallery / Files */}
           <div className="flex flex-col items-center gap-1">
             <button
               onClick={() => fileInputRef.current?.click()}
               className="w-12 h-12 rounded-full bg-neutral-800 hover:bg-neutral-700 text-neutral-200 flex items-center justify-center transition-all cursor-pointer ring-1 ring-neutral-700"
-              title="Shutter Mode / Upload"
+              title="Upload Label Photo"
             >
-              {/* Camera framing focus box icon */}
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-none stroke-current" strokeWidth="2">
-                <path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M4 16v3a1 1 0 0 0 1 1h3M20 16v3a1 1 0 0 1-1 1h-3" />
-                <circle cx="12" cy="12" r="2.5" fill="currentColor" />
-              </svg>
+              <Upload className="w-5 h-5 text-neutral-200" />
             </button>
-            <span className="text-[11px] text-neutral-300 font-medium">Shutter</span>
+            <span className="text-[11px] text-neutral-300 font-medium">Gallery</span>
           </div>
         </div>
 
         {/* Big White Capture Shutter Button */}
-        <button
-          onClick={handleShutterCapture}
-          className="w-16 h-16 rounded-full bg-white border-4 border-neutral-700 shadow-2xl flex items-center justify-center cursor-pointer active:scale-90 transition-transform hover:scale-105"
-          aria-label="Take Photo"
-        >
-          <div className="w-12 h-12 rounded-full border border-neutral-300" />
-        </button>
+        <div className="flex flex-col items-center gap-1.5 mt-1">
+          <button
+            onClick={handleShutterCapture}
+            className="w-16 h-16 rounded-full bg-white border-4 border-neutral-700 shadow-2xl flex items-center justify-center cursor-pointer active:scale-90 transition-transform hover:scale-105"
+            aria-label="Capture Photo"
+          >
+            <div className="w-12 h-12 rounded-full border-2 border-neutral-400 bg-slate-50 flex items-center justify-center">
+              <Camera className="w-6 h-6 text-slate-800" />
+            </div>
+          </button>
+          <span className="text-[10px] text-slate-300 font-medium">Tap to Capture & Analyze</span>
+        </div>
       </div>
     </div>
   );

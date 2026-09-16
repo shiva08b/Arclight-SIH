@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ProductInspectionRecord, ActiveTab, ScreenView } from './types';
-import { getStoredRecords, resetToDefaults } from './utils/storage';
+import { getStoredRecords, resetToDefaults, saveRecord } from './utils/storage';
+import { createInspectionFromCapturedImage } from './utils/imageAnalyzer';
 import { PhoneContainer, BottomNavBar, IndianEmblem } from './components/LayoutComponents';
 import { ScreenSplash, ScreenHome, ScreenNewInspection, ScreenAnalyzing } from './components/InspectionScreens';
 import { ScreenInspectionResult, ScreenDeclarationDetail, ScreenInspectionSaved } from './components/ResultScreens';
@@ -48,12 +49,20 @@ export default function App() {
 
   // Start scan workflow
   const handleSelectProductForScan = (recordId: string, customImage?: string) => {
-    const target = records.find((r) => r.id === recordId) || records[0];
-    if (target) {
-      const updatedRecord = customImage ? { ...target, frontImageUrl: customImage } : target;
-      setActiveRecord(updatedRecord);
+    if (customImage) {
+      const newRecord = createInspectionFromCapturedImage(customImage);
+      saveRecord(newRecord);
+      setRecords((prev) => [newRecord, ...prev.filter((r) => r.id !== newRecord.id)]);
+      setActiveRecord(newRecord);
       setCustomUploadedImage(customImage);
       setCurrentScreen('analyzing');
+    } else {
+      const target = records.find((r) => r.id === recordId) || records[0];
+      if (target) {
+        setActiveRecord(target);
+        setCustomUploadedImage(undefined);
+        setCurrentScreen('analyzing');
+      }
     }
   };
 
