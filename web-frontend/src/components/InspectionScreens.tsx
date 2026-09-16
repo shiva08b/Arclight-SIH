@@ -645,6 +645,70 @@ export function ScreenNewInspection({
           </button>
           <span className="text-[10px] text-slate-300 font-medium">Tap to Capture & Analyze</span>
         </div>
+
+        {/* Quick Test Sample Commodities Carousel */}
+        <div className="w-full mt-2 pt-2 border-t border-neutral-700/60 flex flex-col items-center gap-1.5">
+          <div className="flex items-center justify-between w-full text-[10px] text-neutral-400 px-1">
+            <span className="font-semibold uppercase tracking-wider text-slate-300">Quick Test Samples:</span>
+            <span className="text-slate-400">1-Tap AI Audit</span>
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto w-full pb-1 no-scrollbar">
+            <button
+              onClick={() => onSelectProductForScan('rec-amul')}
+              className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 flex-shrink-0 cursor-pointer text-left transition-colors"
+            >
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <div>
+                <span className="text-[10px] font-bold text-white block">Amul Milk (1L)</span>
+                <span className="text-[9px] text-slate-300">₹ 54.00 • Compliant</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onSelectProductForScan('rec-tata')}
+              className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 flex-shrink-0 cursor-pointer text-left transition-colors"
+            >
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <div>
+                <span className="text-[10px] font-bold text-white block">Tata Salt (1kg)</span>
+                <span className="text-[9px] text-slate-300">₹ 28.00 • Compliant</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onSelectProductForScan('rec-britannia')}
+              className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 flex-shrink-0 cursor-pointer text-left transition-colors"
+            >
+              <div className="w-2 h-2 rounded-full bg-amber-400" />
+              <div>
+                <span className="text-[10px] font-bold text-white block">Good Day (100g)</span>
+                <span className="text-[9px] text-amber-300">₹ 30.00 • Non-Compliant</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onSelectProductForScan('rec-fortune')}
+              className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 flex-shrink-0 cursor-pointer text-left transition-colors"
+            >
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <div>
+                <span className="text-[10px] font-bold text-white block">Fortune Oil (1L)</span>
+                <span className="text-[9px] text-slate-300">₹ 165.00 • Compliant</span>
+              </div>
+            </button>
+
+            <button
+              onClick={() => onSelectProductForScan('rec-dettol')}
+              className="bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 flex-shrink-0 cursor-pointer text-left transition-colors"
+            >
+              <div className="w-2 h-2 rounded-full bg-emerald-400" />
+              <div>
+                <span className="text-[10px] font-bold text-white block">Dettol (250ml)</span>
+                <span className="text-[9px] text-slate-300">₹ 178.00 • Compliant</span>
+              </div>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

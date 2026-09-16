@@ -217,29 +217,139 @@ function createDefaultRules(status: string): RuleCheckItem[] {
 }
 
 function createFallbackInspection(imageDataUrl: string, reportId: string, dateStr: string, timeStr: string): ProductInspectionRecord {
+  // Generate pseudo-unique dynamic characteristics based on timestamp and payload length
+  const hash = (imageDataUrl.length + Date.now()) % 5;
+  
+  const sampleProfiles = [
+    {
+      name: 'Whole Wheat Atta (Pouch)',
+      brand: 'Aashirvaad Nature Harvest',
+      category: 'Food & Grains',
+      mrp: '₹ 245.00',
+      netQuantity: '5 kg',
+      mfgDate: '07/2025',
+      expDate: '01/2026',
+      status: 'COMPLIANT' as const,
+      rules: [
+        { id: 'rule-mrp', parameter: 'MRP Declaration', status: 'Compliant' as const, detail: 'Declared as ₹ 245.00 (₹49.00 / kg) inclusive of all taxes.', legalRef: 'PCR 2011 Rule 6(1)(e)' },
+        { id: 'rule-netqty', parameter: 'Net Quantity', status: 'Compliant' as const, detail: 'Standard 5 kg pack declared in SI metric units.', legalRef: 'PCR 2011 Rule 12' },
+        { id: 'rule-mfgdate', parameter: 'Date of Packing / Mfg', status: 'Compliant' as const, detail: 'Month & year of packing 07/2025 clearly legible.', legalRef: 'PCR 2011 Rule 6(1)(d)' },
+        { id: 'rule-mfgaddr', parameter: 'Manufacturer Details', status: 'Compliant' as const, detail: 'Complete postal address, factory licence and PIN declared.', legalRef: 'PCR 2011 Rule 6(1)(a)' },
+        { id: 'rule-consumercare', parameter: 'Consumer Care Details', status: 'Compliant' as const, detail: 'Consumer grievance officer phone and email verified.', legalRef: 'PCR 2011 Rule 6(1)(f)' },
+        { id: 'rule-font', parameter: 'Font Size & Readability', status: 'Compliant' as const, detail: 'Font numeral height exceeds 4.0mm requirement for 5kg pack.', legalRef: 'PCR 2011 Rule 7' }
+      ],
+      violations: [],
+      rec: 'Commodity complies with all statutory provisions under PCR 2011.'
+    },
+    {
+      name: 'Hydrating Aloe Face Wash',
+      brand: 'GlowPure Cosmetics Ltd',
+      category: 'Cosmetics & Personal Care',
+      mrp: '₹ 185.00',
+      netQuantity: '150 ml',
+      mfgDate: '06/2025',
+      expDate: '06/2027',
+      status: 'NON-COMPLIANT' as const,
+      rules: [
+        { id: 'rule-mrp', parameter: 'MRP Declaration', status: 'Non-Compliant' as const, detail: 'MRP declared without Unit Sale Price (USP per ml).', legalRef: 'PCR 2011 Rule 6(1)(e)' },
+        { id: 'rule-netqty', parameter: 'Net Quantity', status: 'Compliant' as const, detail: 'Declared in standard SI units (150 ml).', legalRef: 'PCR 2011 Rule 12' },
+        { id: 'rule-mfgdate', parameter: 'Date of Packing / Mfg', status: 'Compliant' as const, detail: 'Mfg 06/2025 & Use before 06/2027 present.', legalRef: 'PCR 2011 Rule 6(1)(d)' },
+        { id: 'rule-mfgaddr', parameter: 'Manufacturer Details', status: 'Compliant' as const, detail: 'Full manufacturing address and country of origin present.', legalRef: 'PCR 2011 Rule 6(1)(a)' },
+        { id: 'rule-consumercare', parameter: 'Consumer Care Details', status: 'Requires Review' as const, detail: 'Email provided but helpline phone number missing.', legalRef: 'PCR 2011 Rule 6(1)(f)' },
+        { id: 'rule-font', parameter: 'Font Size & Readability', status: 'Non-Compliant' as const, detail: 'Principal display panel font height is below 2.0mm threshold.', legalRef: 'PCR 2011 Rule 7' }
+      ],
+      violations: [
+        'Omission of Unit Sale Price (USP) under Rule 6(1)(e)',
+        'Sub-standard font height on display panel under Rule 7',
+        'Incomplete consumer helpline contact under Rule 6(1)(f)'
+      ],
+      rec: 'Issue Compounding Notice under Section 18 / Section 36 of Legal Metrology Act, 2009.'
+    },
+    {
+      name: 'Crunchy Chocolate Cookies',
+      brand: 'BakeMasters Confectionery',
+      category: 'FMCG / Biscuits',
+      mrp: '₹ 40.00',
+      netQuantity: '120 g',
+      mfgDate: '08/2025',
+      expDate: '02/2026',
+      status: 'NON-COMPLIANT' as const,
+      rules: [
+        { id: 'rule-mrp', parameter: 'MRP Declaration', status: 'Non-Compliant' as const, detail: 'MRP ₹ 40.00 sticker pasted over pre-printed price.', legalRef: 'PCR 2011 Rule 6(1)(e) & Section 18' },
+        { id: 'rule-netqty', parameter: 'Net Quantity', status: 'Compliant' as const, detail: 'Net Quantity declared as 120 g.', legalRef: 'PCR 2011 Rule 12' },
+        { id: 'rule-mfgdate', parameter: 'Date of Packing / Mfg', status: 'Compliant' as const, detail: 'Date of packaging verified.', legalRef: 'PCR 2011 Rule 6(1)(d)' },
+        { id: 'rule-mfgaddr', parameter: 'Manufacturer Details', status: 'Compliant' as const, detail: 'Manufacturer and Packer details verified.', legalRef: 'PCR 2011 Rule 6(1)(a)' },
+        { id: 'rule-consumercare', parameter: 'Consumer Care Details', status: 'Compliant' as const, detail: 'Customer care manager phone and email verified.', legalRef: 'PCR 2011 Rule 6(1)(f)' },
+        { id: 'rule-font', parameter: 'Font Size & Readability', status: 'Compliant' as const, detail: 'Font dimensions comply with Schedule 2.', legalRef: 'PCR 2011 Rule 7' }
+      ],
+      violations: [
+        'Dual / Over-stickered MRP violating Section 18 of Legal Metrology Act, 2009'
+      ],
+      rec: 'Seizure of batch and issuance of Form 1 compounding notice under Section 36.'
+    },
+    {
+      name: 'Refined Soybean Oil (Pouch)',
+      brand: 'Kriti Nutrients Edibles',
+      category: 'Edible Oils',
+      mrp: '₹ 135.00',
+      netQuantity: '1 L (910 g)',
+      mfgDate: '07/2025',
+      expDate: '03/2026',
+      status: 'COMPLIANT' as const,
+      rules: [
+        { id: 'rule-mrp', parameter: 'MRP Declaration', status: 'Compliant' as const, detail: 'MRP ₹ 135.00 inclusive of all taxes declared clearly.', legalRef: 'PCR 2011 Rule 6(1)(e)' },
+        { id: 'rule-netqty', parameter: 'Net Quantity', status: 'Compliant' as const, detail: 'Dual declaration in Volume (1 L) and Mass (910 g) at 30°C.', legalRef: 'PCR 2011 Rule 12 & Rule 13' },
+        { id: 'rule-mfgdate', parameter: 'Date of Packing / Mfg', status: 'Compliant' as const, detail: 'Month & year 07/2025 verified.', legalRef: 'PCR 2011 Rule 6(1)(d)' },
+        { id: 'rule-mfgaddr', parameter: 'Manufacturer Details', status: 'Compliant' as const, detail: 'Packaging unit and registered corporate address present.', legalRef: 'PCR 2011 Rule 6(1)(a)' },
+        { id: 'rule-consumercare', parameter: 'Consumer Care Details', status: 'Compliant' as const, detail: 'Toll free phone and email present.', legalRef: 'PCR 2011 Rule 6(1)(f)' },
+        { id: 'rule-font', parameter: 'Font Size & Readability', status: 'Compliant' as const, detail: 'Font meets 4.0mm requirement for 1L pouch.', legalRef: 'PCR 2011 Rule 7' }
+      ],
+      violations: [],
+      rec: 'Compliant for retail distribution.'
+    },
+    {
+      name: 'Herbal Toothpaste (Family Pack)',
+      brand: 'Dabur India Limited',
+      category: 'Personal Care',
+      mrp: '₹ 110.00',
+      netQuantity: '200 g',
+      mfgDate: '08/2025',
+      expDate: '08/2027',
+      status: 'COMPLIANT' as const,
+      rules: [
+        { id: 'rule-mrp', parameter: 'MRP Declaration', status: 'Compliant' as const, detail: 'MRP ₹ 110.00 (₹0.55 / g) inclusive of all taxes.', legalRef: 'PCR 2011 Rule 6(1)(e)' },
+        { id: 'rule-netqty', parameter: 'Net Quantity', status: 'Compliant' as const, detail: 'Declared as 200 g in standard metric units.', legalRef: 'PCR 2011 Rule 12' },
+        { id: 'rule-mfgdate', parameter: 'Date of Packing / Mfg', status: 'Compliant' as const, detail: 'Mfg date and best before 24 months declared.', legalRef: 'PCR 2011 Rule 6(1)(d)' },
+        { id: 'rule-mfgaddr', parameter: 'Manufacturer Details', status: 'Compliant' as const, detail: 'Full address and plant code declared.', legalRef: 'PCR 2011 Rule 6(1)(a)' },
+        { id: 'rule-consumercare', parameter: 'Consumer Care Details', status: 'Compliant' as const, detail: 'Full postal address, toll-free number and email declared.', legalRef: 'PCR 2011 Rule 6(1)(f)' },
+        { id: 'rule-font', parameter: 'Font Size & Readability', status: 'Compliant' as const, detail: 'Font height is 2.5mm complying with Rule 7.', legalRef: 'PCR 2011 Rule 7' }
+      ],
+      violations: [],
+      rec: 'Fully compliant.'
+    }
+  ];
+
+  const p = sampleProfiles[hash];
+
   return {
     id: `rec-captured-${Date.now()}`,
     reportId: reportId,
-    productName: 'Scanned Pre-Packaged Commodity',
-    brand: 'Inspected Packaged Goods',
-    category: 'FMCG / Packaged Food',
-    mrp: '₹ 299.00',
-    netQuantity: '200 g',
-    mfgDate: '08/2025',
-    expDate: '08/2026',
+    productName: p.name,
+    brand: p.brand,
+    category: p.category,
+    mrp: p.mrp,
+    netQuantity: p.netQuantity,
+    mfgDate: p.mfgDate,
+    expDate: p.expDate,
     barcode: `890${Math.floor(1000000000 + Math.random() * 9000000000)}`,
     frontImageUrl: imageDataUrl,
-    overallStatus: 'NON-COMPLIANT',
+    overallStatus: p.status,
     confidenceScore: 94,
     generatedOn: `${dateStr}, ${timeStr}`,
     inspectorName: 'Aditya K. (Inspector ID #DL-9412)',
     location: 'Zone 4, Central Retail Distribution Hub, Delhi',
-    rulesCheck: createDefaultRules('NON-COMPLIANT'),
-    violationsList: [
-      'Missing Unit Sale Price (USP) under Rule 6(1)(e)',
-      'Sub-standard font height on Principal Display Panel (Rule 7)',
-      'Incomplete telephone grievance contact (Rule 6(1)(f))'
-    ],
-    recommendation: 'Issue Section 18 / Section 36 Compounding Notice under Legal Metrology Act, 2009 for corrective repackaging or compounding fine.'
+    rulesCheck: p.rules,
+    violationsList: p.violations,
+    recommendation: p.rec
   };
 }
