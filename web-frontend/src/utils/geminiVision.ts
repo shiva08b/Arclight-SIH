@@ -91,7 +91,7 @@ Respond STRICTLY with a valid JSON object matching this schema (NO markdown form
 }`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: {
@@ -112,7 +112,7 @@ Respond STRICTLY with a valid JSON object matching this schema (NO markdown form
             },
           ],
           generationConfig: {
-            temperature: 0.2,
+            temperature: 0.1,
             responseMimeType: 'application/json',
           },
         }),
@@ -125,7 +125,14 @@ Respond STRICTLY with a valid JSON object matching this schema (NO markdown form
     }
 
     const data = await response.json();
-    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    let rawText = '';
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    for (const p of parts) {
+      if (p.text) {
+        rawText = p.text;
+        if (p.text.includes('{') && p.text.includes('}')) break;
+      }
+    }
 
     if (!rawText) {
       return createFallbackInspection(imageDataUrl, reportId, dateStr, timeStr);
