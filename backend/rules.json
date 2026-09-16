@@ -1,0 +1,70 @@
+{
+  "version": "1.0",
+  "framework": "Legal Metrology (Packaged Commodities) Rules, 2011",
+  "checks": [
+    {
+      "id": "LM-001",
+      "field": "manufacturer",
+      "name": "Manufacturer / Packer / Importer details",
+      "rule": "Rule 6(1)(a)",
+      "mandatory": true,
+      "type": "presence"
+    },
+    {
+      "id": "LM-002",
+      "field": "generic_name",
+      "name": "Common / Generic name of commodity",
+      "rule": "Rule 6(1)(b)",
+      "mandatory": true,
+      "type": "presence"
+    },
+    {
+      "id": "LM-003",
+      "field": "net_quantity",
+      "name": "Net quantity",
+      "rule": "Rule 6(1)(c)",
+      "mandatory": true,
+      "type": "presence"
+    },
+    {
+      "id": "LM-004",
+      "field": "manufacturing_date",
+      "name": "Month and year of manufacture / pre-packing / import",
+      "rule": "Rule 6(1)(d)",
+      "mandatory": true,
+      "type": "presence"
+    },
+    {
+      "id": "LM-005",
+      "field": "mrp",
+      "name": "Maximum Retail Price",
+      "rule": "Rule 6(1)(e)",
+      "mandatory": true,
+      "type": "mrp"
+    },
+    {
+      "id": "LM-006",
+      "field": "consumer_care",
+      "name": "Consumer complaint contact details",
+      "rule": "Rule 6(2)",
+      "mandatory": true,
+      "type": "consumer_care"
+    },
+    {
+      "id": "LM-007",
+      "field": "batch_number",
+      "name": "Batch / Lot identification",
+      "rule": "Screening check",
+      "mandatory": false,
+      "type": "presence"
+    },
+    {
+      "id": "LM-008",
+      "field": "best_before",
+      "name": "Best Before / Use By",
+      "rule": "Category-dependent / food-label screening",
+      "mandatory": false,
+      "type": "presence"
+    }
+  ]
+}
