@@ -19,7 +19,7 @@ jobs:
       - name: Install Dependencies & Build Web Assets
         run: |
           cd web-frontend
-          npm ci
+          npm install
           npm run build
           npx cap sync android
 
