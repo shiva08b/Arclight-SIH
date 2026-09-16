@@ -44,50 +44,63 @@ export function ScreenInspectionResult({
 
   const stats = getCompanyComplianceStats(record);
 
-  const declarations = [
-    {
-      name: 'Manufacturer / Packer Details',
-      status: 'Compliant',
-      score: '98%',
-      isViolation: false,
-      isBorderline: false,
-    },
-    {
-      name: 'Net Quantity',
-      status: 'Compliant',
-      score: '96%',
-      isViolation: false,
-      isBorderline: false,
-    },
-    {
-      name: 'Maximum Retail Price (MRP)',
-      status: isCompliant ? 'Compliant' : 'Violation',
-      score: isCompliant ? '99%' : '92%',
-      isViolation: !isCompliant,
-      isBorderline: false,
-    },
-    {
-      name: 'Date of Manufacture',
-      status: 'Compliant',
-      score: '95%',
-      isViolation: false,
-      isBorderline: false,
-    },
-    {
-      name: 'Consumer Care Information',
-      status: isCompliant ? 'Compliant' : 'Violation',
-      score: isCompliant ? '97%' : '89%',
-      isViolation: !isCompliant,
-      isBorderline: false,
-    },
-    {
-      name: 'Font Size / Readability',
-      status: isCompliant ? 'Compliant' : 'Borderline',
-      score: isCompliant ? '95%' : '78%',
-      isViolation: false,
-      isBorderline: !isCompliant,
-    },
-  ];
+  // Dynamically map from Gemini AI / scanner rule checks
+  const declarations = (record.rulesCheck && record.rulesCheck.length > 0)
+    ? record.rulesCheck.map((rule) => {
+        const isViolation = rule.status === 'Non-Compliant';
+        const isBorderline = rule.status === 'Requires Review';
+        return {
+          name: rule.parameter,
+          status: rule.status === 'Compliant' ? 'Compliant' : isViolation ? 'Violation' : 'Borderline',
+          score: isViolation ? '74%' : isBorderline ? '86%' : '98%',
+          isViolation,
+          isBorderline,
+        };
+      })
+    : [
+        {
+          name: 'Manufacturer / Packer Details',
+          status: 'Compliant',
+          score: '98%',
+          isViolation: false,
+          isBorderline: false,
+        },
+        {
+          name: 'Net Quantity',
+          status: 'Compliant',
+          score: '96%',
+          isViolation: false,
+          isBorderline: false,
+        },
+        {
+          name: 'Maximum Retail Price (MRP)',
+          status: isCompliant ? 'Compliant' : 'Violation',
+          score: isCompliant ? '99%' : '92%',
+          isViolation: !isCompliant,
+          isBorderline: false,
+        },
+        {
+          name: 'Date of Manufacture',
+          status: 'Compliant',
+          score: '95%',
+          isViolation: false,
+          isBorderline: false,
+        },
+        {
+          name: 'Consumer Care Information',
+          status: isCompliant ? 'Compliant' : 'Violation',
+          score: isCompliant ? '97%' : '89%',
+          isViolation: !isCompliant,
+          isBorderline: false,
+        },
+        {
+          name: 'Font Size / Readability',
+          status: isCompliant ? 'Compliant' : 'Borderline',
+          score: isCompliant ? '95%' : '78%',
+          isViolation: false,
+          isBorderline: !isCompliant,
+        },
+      ];
 
   return (
     <div className="flex-1 flex flex-col bg-slate-50/70 overflow-y-auto select-none">
@@ -348,6 +361,17 @@ export function ScreenDeclarationDetail({
   const [remarkText, setRemarkText] = useState('');
   const [isRemarkOpen, setIsRemarkOpen] = useState(false);
 
+  // Find matching rule from Gemini AI inspection
+  const matchedRule = record.rulesCheck?.find(
+    (r) => r.parameter.toLowerCase() === declarationName.toLowerCase() ||
+           declarationName.toLowerCase().includes(r.parameter.toLowerCase()) ||
+           r.parameter.toLowerCase().includes(declarationName.toLowerCase().split(' ')[0])
+  ) || record.rulesCheck?.[0];
+
+  const isRuleViolation = matchedRule ? matchedRule.status === 'Non-Compliant' : true;
+  const isRuleReview = matchedRule ? matchedRule.status === 'Requires Review' : false;
+  const isRuleCompliant = matchedRule ? matchedRule.status === 'Compliant' : false;
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50/70 overflow-y-auto select-none">
       <header className="bg-white border-b border-slate-100 px-4 py-3 flex items-center gap-3 sticky top-0 z-20 flex-shrink-0 shadow-2xs">
@@ -363,63 +387,109 @@ export function ScreenDeclarationDetail({
       </header>
 
       <div className="flex-1 p-4 flex flex-col max-w-lg mx-auto w-full gap-4">
+        {/* Scanned Label Evidence Image / Crop Preview */}
         <div className="bg-white rounded-2xl p-3 border border-slate-200/90 shadow-2xs overflow-hidden">
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col items-center">
-            <div className="w-full max-w-[280px] bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-2.5">
-              <div className="text-xs text-slate-600">
-                <span className="font-semibold">Net Quantity :</span>{' '}
-                <span className="font-bold text-slate-900">{record.netQuantity || '200 g'}</span>
-              </div>
-
-              <div className="border-2 border-[#f97316] bg-orange-50/50 rounded-md p-2.5 relative shadow-xs">
-                <div className="text-xs font-bold text-slate-900 leading-snug">
-                  MRP : <span className="font-black text-[#c2410c]">{record.mrp || '₹ 299.00'}</span>
-                </div>
-                <div className="text-[10px] text-slate-600 italic">(inclusive of all taxes)</div>
-                <div className="absolute -top-2.5 -right-2 bg-[#f97316] text-white text-[9px] font-bold px-2 py-0.5 rounded-full shadow-xs">
-                  Target Inspection Area
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex flex-col items-center">
+            {record.frontImageUrl ? (
+              <div className="w-full max-w-[280px] h-40 rounded-lg overflow-hidden relative border border-slate-300 shadow-xs">
+                <img
+                  src={record.frontImageUrl}
+                  alt={record.productName}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-2 left-2 bg-black/75 text-white text-[9px] font-mono px-2 py-0.5 rounded font-bold">
+                  {record.brand} • {declarationName}
                 </div>
               </div>
+            ) : (
+              <div className="w-full max-w-[280px] bg-white rounded-lg border border-slate-200 p-4 shadow-xs space-y-2.5">
+                <div className="text-xs text-slate-600">
+                  <span className="font-semibold">Net Quantity :</span>{' '}
+                  <span className="font-bold text-slate-900">{record.netQuantity || '200 g'}</span>
+                </div>
 
-              <div className="text-xs text-slate-600">
-                <span className="font-semibold">Mfg. Date :</span>{' '}
-                <span className="font-bold text-slate-900">{record.mfgDate || '08/2025'}</span>
+                <div className="border-2 border-[#f97316] bg-orange-50/50 rounded-md p-2.5 relative shadow-xs">
+                  <div className="text-xs font-bold text-slate-900 leading-snug">
+                    MRP : <span className="font-black text-[#c2410c]">{record.mrp || '₹ 299.00'}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-600 italic">(inclusive of all taxes)</div>
+                </div>
+
+                <div className="text-xs text-slate-600">
+                  <span className="font-semibold">Mfg. Date :</span>{' '}
+                  <span className="font-bold text-slate-900">{record.mfgDate || '08/2025'}</span>
+                </div>
               </div>
-              <div className="text-xs text-slate-600">
-                <span className="font-semibold">Best Before :</span>{' '}
-                <span className="font-bold text-slate-900">{record.expDate || '08/2026'}</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
+        {/* AI Compliance Finding Card */}
         <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-2xs flex flex-col gap-3">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-full bg-orange-100 text-[#f97316] flex items-center justify-center flex-shrink-0 mt-0.5">
-              <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+            <div
+              className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                isRuleCompliant
+                  ? 'bg-emerald-100 text-[#10b981]'
+                  : isRuleReview
+                  ? 'bg-amber-100 text-[#f59e0b]'
+                  : 'bg-orange-100 text-[#f97316]'
+              }`}
+            >
+              {isRuleCompliant ? (
+                <CheckCircle2 className="w-5 h-5 stroke-[2.5]" />
+              ) : isRuleReview ? (
+                <AlertCircle className="w-5 h-5 stroke-[2.5]" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 stroke-[2.5]" />
+              )}
             </div>
             <div>
-              <h3 className="text-xs font-bold text-slate-900">Potential Non-Compliance</h3>
+              <h3 className="text-xs font-bold text-slate-900">
+                {isRuleCompliant ? 'Statutory Declaration Compliant' : isRuleReview ? 'Requires Officer Review' : 'Potential Non-Compliance'}
+              </h3>
               <p className="text-[11px] text-slate-500">
-                Confidence: <span className="font-bold text-[#c2410c]">92%</span>
+                Confidence:{' '}
+                <span className={`font-bold ${isRuleCompliant ? 'text-[#059669]' : 'text-[#c2410c]'}`}>
+                  {record.confidenceScore || 94}%
+                </span>
               </p>
             </div>
           </div>
 
           <div className="pt-2 border-t border-slate-100">
-            <p className="text-xs font-bold text-slate-900 mb-1">Detected Text</p>
-            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs font-sans text-slate-800 leading-relaxed">
-              &ldquo;{record.mrp || 'MRP : ₹ 299.00'}<br />
-              (inclusive of all taxes)&rdquo;
+            <p className="text-xs font-bold text-slate-900 mb-1">Detected Parameter Details</p>
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs font-sans text-slate-800 leading-relaxed space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Product / Brand:</span>
+                <span className="font-bold text-slate-900">{record.productName} ({record.brand})</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Declared MRP:</span>
+                <span className="font-bold text-slate-900">{record.mrp}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500 font-medium">Declared Net Qty:</span>
+                <span className="font-bold text-slate-900">{record.netQuantity}</span>
+              </div>
             </div>
           </div>
 
           <div className="pt-1">
-            <p className="text-xs font-bold text-slate-900 mb-1">Statutory Issue</p>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Detected declaration requires officer review against Legal Metrology (Packaged Commodities) Rules, 2011.
+            <p className="text-xs font-bold text-slate-900 mb-1">Statutory Observation</p>
+            <p className="text-xs text-slate-600 leading-relaxed bg-amber-50/60 p-2.5 rounded-lg border border-amber-200/70">
+              {matchedRule?.detail || 'Declaration checked against Legal Metrology (Packaged Commodities) Rules, 2011.'}
             </p>
           </div>
+
+          {matchedRule?.legalRef && (
+            <div className="pt-0.5">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Legal Citation:</span>
+              <span className="text-[11px] font-semibold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block mt-0.5">
+                {matchedRule.legalRef}
+              </span>
+            </div>
+          )}
 
           {remarkText && (
             <div className="bg-blue-50 border border-blue-200 p-2.5 rounded-lg text-xs">
